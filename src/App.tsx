@@ -224,6 +224,7 @@ export const App: React.FC = () => {
             won={won}
             keepPlaying={keepPlaying}
             score={score}
+            tiles={tiles}
             onRestart={restart}
             onKeepPlaying={handleKeepPlaying}
           />
