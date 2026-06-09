@@ -22,7 +22,6 @@ export const App: React.FC = () => {
     try { return localStorage.getItem('2048-player-id') || ''; } catch { return ''; }
   });
 
-  // Show login modal if no name saved yet — mandatory, cannot be dismissed
   const [showLoginModal, setShowLoginModal] = useState<boolean>(() => {
     try { return !localStorage.getItem('2048-player-name'); } catch { return true; }
   });
@@ -111,7 +110,6 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Block all game keys until logged in
       if (!isLoggedIn) return;
       if (e.code === 'Space') { e.preventDefault(); togglePause(); return; }
       if (isPaused) return;
@@ -125,6 +123,7 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [tiles, gameOver, canUndo, undo, isPaused, isLoggedIn]);
 
+  // Touch handlers scoped to the game board only
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length !== 1) return;
@@ -146,28 +145,16 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div
-      className="min-h-screen w-full flex flex-col items-center justify-start py-8 px-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300 relative select-none"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    // Outer wrapper — NO touch handlers here so the page scrolls freely
+    <div className="min-h-screen w-full flex flex-col items-center justify-start py-8 px-4 bg-slate-50 dark:bg-slate-950 transition-colors duration-300 relative select-none">
       {/* Decorative orbs */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] aspect-square rounded-full bg-indigo-400/10 dark:bg-indigo-600/5 blur-3xl pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] aspect-square rounded-full bg-pink-400/10 dark:bg-purple-600/5 blur-3xl pointer-events-none" />
 
-      {/* ── Mandatory login gate ──────────────────────────────────────────────
-          - Shows on first visit (no name in localStorage)
-          - onClose is a no-op so the × button does nothing until name is saved
-          - Once saved, modal closes and game is fully interactive
-          ──────────────────────────────────────────────────────────────────── */}
       {showLoginModal && (
         <LoginModal
           onSave={handleLoginSave}
-          onClose={() => {
-            // Only allow closing if player already has a name (i.e. changing name)
-            if (isLoggedIn) setShowLoginModal(false);
-            // If not logged in yet, do nothing — forces user to enter a name
-          }}
+          onClose={() => { if (isLoggedIn) setShowLoginModal(false); }}
           existingName={playerName}
         />
       )}
@@ -179,7 +166,6 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* ── Main game — always rendered but visually locked until login ──── */}
       <div className="w-full max-w-lg flex flex-col items-center z-10">
         <Header
           gridSize={gridSize}
@@ -208,14 +194,18 @@ export const App: React.FC = () => {
           isPaused={isPaused}
         />
 
-        <div className="w-full relative mb-6">
+        {/* game-board class applies touch-action: none only here */}
+        <div
+          className="w-full relative mb-6 game-board"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <GameBoard
             tiles={tiles}
             gridSize={gridSize}
             isShaking={isShaking}
           />
 
-          {/* Pause overlay */}
           {isPaused && !gameOver && (
             <div className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl bg-slate-900/70 backdrop-blur-sm z-20">
               <div className="text-5xl mb-3">⏸</div>
