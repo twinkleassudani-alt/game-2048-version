@@ -1,5 +1,8 @@
 import React from 'react';
-import { RotateCcw, Volume2, VolumeX, Sun, Moon, Sparkles, Grid } from 'lucide-react';
+import {
+  RotateCcw, Volume2, VolumeX, Sun, Moon,
+  Sparkles, Grid, Pause, Play, Trophy, User,
+} from 'lucide-react';
 import { GridSize } from '../utils/types';
 
 interface HeaderProps {
@@ -12,22 +15,20 @@ interface HeaderProps {
   onToggleMute: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
+  isPaused: boolean;
+  onTogglePause: () => void;
+  onShowLeaderboard: () => void;
+  onShowLogin: () => void;
+  playerName: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  gridSize,
-  onChangeSize,
-  onRestart,
-  onUndo,
-  canUndo,
-  isMuted,
-  onToggleMute,
-  isDark,
-  onToggleTheme,
+  gridSize, onChangeSize, onRestart, onUndo, canUndo,
+  isMuted, onToggleMute, isDark, onToggleTheme,
+  isPaused, onTogglePause, onShowLeaderboard, onShowLogin, playerName,
 }) => {
   return (
     <header className="w-full max-w-lg mb-6 flex flex-col gap-4">
-      {/* Brand & Theme/Sound Toggles */}
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
@@ -44,9 +45,28 @@ export const Header: React.FC<HeaderProps> = ({
           </p>
         </div>
 
-        {/* Global Settings Actions */}
         <div className="flex items-center gap-2">
-          {/* Mute Button */}
+          <button
+            onClick={onShowLogin}
+            className="flex items-center gap-1.5 p-2.5 rounded-xl transition-all duration-200 text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/70 border border-slate-200/50 dark:border-slate-800/40 shadow-sm active:scale-95"
+            title={playerName ? `Logged in as ${playerName}` : 'Login'}
+          >
+            <User className="w-4 h-4" />
+            {playerName && (
+              <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 max-w-[60px] truncate">
+                {playerName}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={onShowLeaderboard}
+            className="p-2.5 rounded-xl transition-all duration-200 text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/70 border border-slate-200/50 dark:border-slate-800/40 shadow-sm active:scale-95"
+            title="View Leaderboard"
+          >
+            <Trophy className="w-4 h-4" />
+          </button>
+
           <button
             onClick={onToggleMute}
             className="p-2.5 rounded-xl transition-all duration-200 text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/70 border border-slate-200/50 dark:border-slate-800/40 shadow-sm active:scale-95"
@@ -55,7 +75,6 @@ export const Header: React.FC<HeaderProps> = ({
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
 
-          {/* Theme Button */}
           <button
             onClick={onToggleTheme}
             className="p-2.5 rounded-xl transition-all duration-200 text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/70 border border-slate-200/50 dark:border-slate-800/40 shadow-sm active:scale-95"
@@ -66,9 +85,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Control Actions & Custom Size Dropdown */}
       <div className="flex items-center justify-between gap-3 bg-white/50 dark:bg-slate-900/40 p-2 rounded-2xl border border-slate-200/40 dark:border-slate-800/20 shadow-sm">
-        {/* Grid Size Select */}
         <div className="relative flex items-center bg-white dark:bg-slate-900 rounded-xl px-2.5 py-1.5 border border-slate-200/60 dark:border-slate-800/60 shadow-inner">
           <Grid className="w-3.5 h-3.5 text-slate-400 mr-2" />
           <select
@@ -83,27 +100,35 @@ export const Header: React.FC<HeaderProps> = ({
           </select>
         </div>
 
-        {/* Action Controls */}
         <div className="flex items-center gap-2">
-          {/* Undo button */}
+          <button
+            onClick={onTogglePause}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 shadow-sm active:scale-95 cursor-pointer ${isPaused
+                ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/60'
+                : 'bg-amber-50/80 text-amber-700 border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/60'
+              }`}
+            title={isPaused ? 'Resume Game' : 'Pause Game'}
+          >
+            {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+            <span>{isPaused ? 'Resume' : 'Pause'}</span>
+          </button>
+
           <button
             onClick={onUndo}
             disabled={!canUndo}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 ${
-              canUndo
-                ? 'bg-indigo-50/80 text-indigo-700 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/60 dark:hover:bg-indigo-900/40 cursor-pointer active:scale-95 shadow-sm'
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all duration-200 ${canUndo
+                ? 'bg-indigo-50/80 text-indigo-700 border-indigo-200 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/60 cursor-pointer active:scale-95 shadow-sm'
                 : 'bg-slate-100/50 text-slate-400 border-slate-200/50 dark:bg-slate-900/20 dark:text-slate-600 dark:border-slate-800/30 cursor-not-allowed'
-            }`}
+              }`}
             title="Undo Last Move"
           >
             <RotateCcw className="w-3 h-3" />
             <span>Undo</span>
           </button>
 
-          {/* New Game Button */}
           <button
             onClick={onRestart}
-            className="px-4.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-md shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-95 cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-md active:scale-95 cursor-pointer"
           >
             New Game
           </button>

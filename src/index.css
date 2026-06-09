@@ -1,35 +1,42 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  
-  /* High quality color pallet overrides if needed, otherwise using v4 defaults */
   --color-game-bg-light: #f8fafc;
   --color-game-bg-dark: #0f172a;
 }
 
-/* Base modifications */
 @layer base {
-  html, body, #root {
+
+  html,
+  body,
+  #root {
     height: 100%;
     margin: 0;
     padding: 0;
   }
 
   body {
-    touch-action: none; /* Prevents default pull-to-refresh and double-tap zoom */
+    touch-action: none;
+  }
+
+  html.dark {
+    color-scheme: dark;
   }
 }
 
-/* Animations */
 @keyframes pop-in {
   0% {
     transform: scale(0);
     opacity: 0;
   }
+
   50% {
     transform: scale(1.1);
   }
+
   100% {
     transform: scale(1);
     opacity: 1;
@@ -40,18 +47,32 @@
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.22);
   }
+
   100% {
     transform: scale(1);
   }
 }
 
 @keyframes shake-board {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-6px); }
-  40%, 80% { transform: translateX(6px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
 }
 
 @keyframes float-up-fade {
@@ -59,13 +80,13 @@
     transform: translate(-50%, 0);
     opacity: 1;
   }
+
   100% {
     transform: translate(-50%, -40px);
     opacity: 0;
   }
 }
 
-/* Animation utilities */
 .animate-pop-in {
   animation: pop-in 180ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
@@ -82,7 +103,6 @@
   animation: float-up-fade 800ms cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
 }
 
-/* Glassmorphism Classes */
 .glass-panel {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
@@ -109,9 +129,8 @@
   box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.15);
 }
 
-/* Grid layout & tile systems */
 .tile-container {
-  --grid-size: 4;
+  /* --grid-size set only via inline style in GameBoard.tsx */
 }
 
 .tile {
@@ -122,8 +141,6 @@
   transform: translate(calc(var(--col) * 100%), calc(var(--row) * 100%));
 }
 
-/* 2048 Tile Color Gradients & Shadows */
-/* Neon Glow Themes for higher tier numbers */
 .tile-glow-2048 {
   box-shadow: 0 0 15px rgba(245, 158, 11, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.4);
 }
