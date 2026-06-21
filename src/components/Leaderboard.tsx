@@ -21,8 +21,14 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, gridSize }) =
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSize, setActiveSize] = useState<GridSize>(gridSize);
-  const sizes: GridSize[] = [3, 4, 5, 6];
+
+  // ── Multi-grid-size leaderboard — UI hidden, logic kept for future re-enable.
+  // To restore: uncomment `sizes` + the activeSize state usage below, swap
+  // back the `useState<GridSize>(gridSize)` line, and uncomment the
+  // "Grid size tabs" JSX block further down. Currently locked to 4×4 only.
+  // const sizes: GridSize[] = [3, 4, 5, 6];
+  // const [activeSize, setActiveSize] = useState<GridSize>(gridSize);
+  const activeSize: GridSize = 4; // locked to 4×4 only
 
   const fetchLeaderboard = async () => {
     setIsLoading(true);
@@ -85,7 +91,10 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, gridSize }) =
           </button>
         </div>
 
-        {/* Grid size tabs */}
+        {/* Grid size tabs — UI hidden, logic kept for future re-enable.
+            To restore: uncomment the block below (and the `sizes` /
+            `setActiveSize` declarations above). */}
+        {/*
         <div className="flex gap-1.5 px-5 mb-4">
           {sizes.map((s) => (
             <button
@@ -100,9 +109,10 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, gridSize }) =
             </button>
           ))}
         </div>
+        */}
 
         {/* Divider */}
-        <div className="mx-5 h-px bg-white/8 mb-1" />
+        <div className="mx-5 h-px bg-white/8 mb-1 mt-1" />
 
         {/* Score list */}
         <div className="px-3 pb-2 max-h-72 overflow-y-auto">
@@ -120,7 +130,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, gridSize }) =
             </div>
           ) : entries.length === 0 ? (
             <div className="text-center py-10 text-xs text-slate-500 font-semibold select-none">
-              No records yet for {activeSize}×{activeSize}.<br />Be the first!
+              No records yet.<br />Be the first!
             </div>
           ) : (
             <div className="flex flex-col divide-y divide-white/5">

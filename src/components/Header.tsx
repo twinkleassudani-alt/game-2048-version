@@ -104,7 +104,9 @@ export const Header: React.FC<HeaderProps> = ({
       {/* ── Row 2: Grid size left, Pause + Undo + New Game right ── */}
       <div className="flex items-center justify-between gap-2 bg-white/50 dark:bg-slate-900/40 p-2 rounded-2xl border border-slate-200/40 dark:border-slate-800/20 shadow-sm">
 
-        {/* Grid size selector */}
+        {/* Grid size selector — UI hidden, logic kept for future re-enable.
+            To restore: uncomment the block below and remove the static label. */}
+        {/*
         <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl px-2.5 py-1.5 border border-slate-200/60 dark:border-slate-800/60 shadow-inner flex-shrink-0">
           <Grid className="w-3.5 h-3.5 text-slate-400 mr-1.5" />
           <select
@@ -117,6 +119,13 @@ export const Header: React.FC<HeaderProps> = ({
             <option value="5" className="dark:bg-slate-950">5×5 (Big)</option>
             <option value="6" className="dark:bg-slate-950">6×6 (Huge)</option>
           </select>
+        </div>
+        */}
+        <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl px-2.5 py-1.5 border border-slate-200/60 dark:border-slate-800/60 shadow-inner flex-shrink-0">
+          <Grid className="w-3.5 h-3.5 text-slate-400 mr-1.5" />
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+            4×4 (Classic)
+          </span>
         </div>
 
         {/* Action buttons */}

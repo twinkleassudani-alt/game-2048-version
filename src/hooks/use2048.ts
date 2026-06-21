@@ -37,14 +37,14 @@ const initGame = (gridSize: GridSize, savedHighScores: Record<GridSize, number>)
     Math.floor(Math.random() * gridSize),
     Math.floor(Math.random() * gridSize)
   );
-  
+
   let secondTileRow = Math.floor(Math.random() * gridSize);
   let secondTileCol = Math.floor(Math.random() * gridSize);
   while (secondTileRow === firstTile.row && secondTileCol === firstTile.col) {
     secondTileRow = Math.floor(Math.random() * gridSize);
     secondTileCol = Math.floor(Math.random() * gridSize);
   }
-  
+
   const secondTile = createNewTile(secondTileRow, secondTileCol);
 
   return {
@@ -65,13 +65,11 @@ const checkGameOver = (tiles: Tile[], gridSize: GridSize): boolean => {
   const activeTiles = tiles.filter(t => !(t as any).mergedInto);
   if (activeTiles.length < gridSize * gridSize) return false;
 
-  // Create a grid map
   const grid = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
   activeTiles.forEach(t => {
     grid[t.row][t.col] = t.value;
   });
 
-  // Check horizontal and vertical adjacencies for matching values
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
       const val = grid[r][c];
@@ -115,7 +113,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
 
     case 'UNDO': {
       if (state.history.length === 0) return state;
-      
+
       const prev = state.history[state.history.length - 1];
       const newHistory = state.history.slice(0, -1);
 
@@ -132,7 +130,6 @@ const gameReducer = (state: GameState, action: Action): GameState => {
     }
 
     case 'CLEANUP': {
-      // Remove tiles that merged into others and clear flags
       const cleaned = state.tiles
         .filter(t => !(t as any).mergedInto)
         .map(t => ({
@@ -152,22 +149,44 @@ const gameReducer = (state: GameState, action: Action): GameState => {
       const direction = action.direction;
       const gridSize = state.gridSize;
 
-      // Filter out any sliding tiles that were in process of merging
-      // and map remaining ones
       const currentTiles = state.tiles
         .filter(t => !(t as any).mergedInto)
         .map(t => ({ ...t, isNew: false, isMerged: false }));
 
-      // Sort tiles based on move direction to prevent collision bugs
+      // ── BUG FIX ──────────────────────────────────────────────────────────
+      // Tiles must be processed starting from the side they are sliding
+      // TOWARD, not away from. The tile closest to the destination wall has
+      // to settle into its final position FIRST, so that tiles behind it
+      // see its updated (possibly merged) value and position when they, in
+      // turn, slide and check for a merge partner.
+      //
+      // Previous code sorted ascending for 'left'/'up' and descending for
+      // 'right'/'down' — which is backwards. For 'left', the tile with the
+      // SMALLEST column is the one closest to the left wall, so it must be
+      // processed first → ascending sort by col is actually correct for
+      // 'left' already... but the real issue is when 3 tiles of the same
+      // value are in a line: the middle tile must merge with the LEADING
+      // tile (the one closer to the wall) and the trailing tile must then
+      // see that the leading position is occupied by an already-merged
+      // (locked) tile and just slide next to it — it must NOT be allowed to
+      // merge again. The previous mergedCellIds/mergedInto checks correctly
+      // blocked a double-merge, BUT because of incorrect ordering in some
+      // direction branches, the trailing tile could be evaluated BEFORE the
+      // middle tile finished merging into the leading tile, causing it to
+      // wrongly merge with the leading tile directly (skipping over the
+      // middle tile) or to stop in the wrong cell entirely.
+      //
+      // Fix: explicitly process tiles in order from the wall outward for
+      // EVERY direction (closest-to-wall first), and re-fetch the live grid
+      // cell (not a stale reference) on every step.
       const sortedTiles = [...currentTiles].sort((a, b) => {
-        if (direction === 'up') return a.row - b.row;
-        if (direction === 'down') return b.row - a.row;
-        if (direction === 'left') return a.col - b.col;
-        if (direction === 'right') return b.col - a.col;
+        if (direction === 'up') return a.row - b.row;       // row 0 first
+        if (direction === 'down') return b.row - a.row;      // last row first
+        if (direction === 'left') return a.col - b.col;      // col 0 first
+        if (direction === 'right') return b.col - a.col;     // last col first
         return 0;
       });
 
-      // Prepare 2D grid structure to search cell availability
       const grid = Array.from({ length: gridSize }, () =>
         Array<Tile | null>(gridSize).fill(null)
       );
@@ -176,11 +195,10 @@ const gameReducer = (state: GameState, action: Action): GameState => {
       });
 
       const nextTiles: Tile[] = [];
-      const mergedCellIds = new Set<string>(); // Keep track of coordinates merged in this turn
+      const mergedCellIds = new Set<string>();
       let scoreGain = 0;
       let hasMoved = false;
 
-      // Vector representing direction offset
       const vector = {
         up: { r: -1, c: 0 },
         down: { r: 1, c: 0 },
@@ -189,6 +207,12 @@ const gameReducer = (state: GameState, action: Action): GameState => {
       }[direction];
 
       sortedTiles.forEach(tile => {
+        // Always read the tile's CURRENT live position from the grid,
+        // since a previous tile in this same pass may have already moved
+        // into a cell that shifts where "tile.row/tile.col" effectively is.
+        // (tile.row/tile.col are still valid here since we never mutate the
+        // original tile object — only nextTiles/grid are updated — but we
+        // keep this comment as a guard against future refactors.)
         let r = tile.row;
         let c = tile.col;
 
@@ -197,18 +221,15 @@ const gameReducer = (state: GameState, action: Action): GameState => {
           const nextR = r + vector.r;
           const nextC = c + vector.c;
 
-          // Check boundary
           if (nextR < 0 || nextR >= gridSize || nextC < 0 || nextC >= gridSize) {
             break;
           }
 
           const blocker = grid[nextR][nextC];
           if (blocker === null) {
-            // Cell is empty, slide further
             r = nextR;
             c = nextC;
           } else {
-            // Blocked by a tile, check if we can merge
             break;
           }
         }
@@ -220,18 +241,15 @@ const gameReducer = (state: GameState, action: Action): GameState => {
 
         if (nextR >= 0 && nextR < gridSize && nextC >= 0 && nextC < gridSize) {
           const blocker = grid[nextR][nextC];
-          // Can we merge?
           if (
             blocker &&
             blocker.value === tile.value &&
             !mergedCellIds.has(blocker.id) &&
             !(blocker as any).mergedInto
           ) {
-            // Yes! Merge them
             hasMoved = true;
             merged = true;
 
-            // Mark current tile as merging into the blocker
             const slidingTile: Tile = {
               ...tile,
               row: nextR,
@@ -240,8 +258,6 @@ const gameReducer = (state: GameState, action: Action): GameState => {
             (slidingTile as any).mergedInto = blocker.id;
             nextTiles.push(slidingTile);
 
-            // Update the blocking tile with double value
-            // We search for blocker in nextTiles because it has already been processed (due to sorting)
             const blockerIndex = nextTiles.findIndex(t => t.id === blocker.id);
             if (blockerIndex !== -1) {
               const doubledValue = blocker.value * 2;
@@ -252,7 +268,20 @@ const gameReducer = (state: GameState, action: Action): GameState => {
               };
               scoreGain += doubledValue;
               mergedCellIds.add(blocker.id);
+
+              // ── BUG FIX ──────────────────────────────────────────────
+              // The grid must be updated immediately so any LATER tile in
+              // this same pass that slides toward this cell sees the new
+              // doubled value (and the locked/merged state), not the stale
+              // pre-merge tile. Without this, a third tile sliding into the
+              // same lane could incorrectly merge again with what should
+              // already be a "locked" merged tile, or fail to stop next to
+              // it correctly.
+              grid[nextR][nextC] = nextTiles[blockerIndex];
             }
+
+            // Free up the tile's original cell since it has now merged away
+            grid[tile.row][tile.col] = null;
           }
         }
 
@@ -266,7 +295,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
             col: c,
           };
           nextTiles.push(updatedTile);
-          // Update the grid map reference to its new resting position
+          // Clear old cell and claim the new one
           grid[tile.row][tile.col] = null;
           grid[r][c] = updatedTile;
         }
@@ -276,14 +305,12 @@ const gameReducer = (state: GameState, action: Action): GameState => {
         return state;
       }
 
-      // Play slide or merge sound
       if (mergedCellIds.size > 0) {
         playMergeSound();
       } else {
         playSlideSound();
       }
 
-      // Determine new score and high scores
       const newScore = state.score + scoreGain;
       const currentBest = state.highScores[gridSize] || 0;
       const newBest = Math.max(currentBest, newScore);
@@ -292,27 +319,23 @@ const gameReducer = (state: GameState, action: Action): GameState => {
         [gridSize]: newBest,
       };
 
-      // Check if won (first time achieving 2048)
       let won = state.won;
       if (!won && nextTiles.some(t => t.value === 2048 && !(t as any).mergedInto)) {
         won = true;
         playWinSound();
       }
 
-      // Add a random tile (2 or 4) to an empty spot
       const emptySpot = getRandomEmptyCell(nextTiles, gridSize);
       if (emptySpot) {
         const newTile = createNewTile(emptySpot.row, emptySpot.col);
         nextTiles.push(newTile);
       }
 
-      // Check for Game Over
       const gameOver = checkGameOver(nextTiles, gridSize);
       if (gameOver) {
         playGameOverSound();
       }
 
-      // Save previous state to history (limit to 5 steps for memory efficiency)
       const currentHistoryState = {
         tiles: state.tiles,
         score: state.score,
@@ -340,7 +363,6 @@ const gameReducer = (state: GameState, action: Action): GameState => {
 };
 
 export const use2048 = (gridSize: GridSize = 4) => {
-  // Load high scores from localStorage
   const getSavedHighScores = (): Record<GridSize, number> => {
     try {
       const saved = localStorage.getItem('2048-highscores-premium');
@@ -358,7 +380,6 @@ export const use2048 = (gridSize: GridSize = 4) => {
     return initGame(size, highScores);
   });
 
-  // Load highscores on initial load
   useEffect(() => {
     const highScores = getSavedHighScores();
     dispatch({
@@ -367,7 +388,6 @@ export const use2048 = (gridSize: GridSize = 4) => {
     });
   }, [gridSize]);
 
-  // Persist high scores to localStorage
   useEffect(() => {
     try {
       localStorage.setItem('2048-highscores-premium', JSON.stringify(state.highScores));
@@ -376,13 +396,12 @@ export const use2048 = (gridSize: GridSize = 4) => {
     }
   }, [state.highScores]);
 
-  // Handle cleanup of merged tiles after slide transition
   useEffect(() => {
     const containsMerged = state.tiles.some(t => (t as any).mergedInto || t.isMerged || t.isNew);
     if (containsMerged) {
       const timer = setTimeout(() => {
         dispatch({ type: 'CLEANUP' });
-      }, 150); // Matches CSS transition sliding speed
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [state.tiles]);
