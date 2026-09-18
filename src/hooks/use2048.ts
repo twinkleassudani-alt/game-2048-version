@@ -112,7 +112,7 @@ const gameReducer = (state: GameState, action: Action): GameState => {
     }
 
     case 'UNDO': {
-      if (state.history.length === 0) return state;
+      if (state.gameOver || state.history.length === 0) return state;
 
       const prev = state.history[state.history.length - 1];
       const newHistory = state.history.slice(0, -1);
@@ -434,7 +434,7 @@ export const use2048 = (gridSize: GridSize = 4) => {
     won: state.won,
     keepPlaying: state.keepPlaying,
     moveCount: state.moveCount,
-    canUndo: state.history.length > 0,
+    canUndo: !state.gameOver && state.history.length > 0,
     move,
     restart,
     undo,

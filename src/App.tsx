@@ -117,7 +117,7 @@ export const App: React.FC = () => {
       else if (['ArrowDown', 'KeyS'].includes(e.code)) { e.preventDefault(); handleMove('down'); }
       else if (['ArrowLeft', 'KeyA'].includes(e.code)) { e.preventDefault(); handleMove('left'); }
       else if (['ArrowRight', 'KeyD'].includes(e.code)) { e.preventDefault(); handleMove('right'); }
-      else if (e.code === 'KeyZ' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (canUndo) undo(); }
+      else if (e.code === 'KeyZ' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (canUndo && !gameOver && !isPaused) undo(); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -172,7 +172,7 @@ export const App: React.FC = () => {
           onChangeSize={setGridSize}
           onRestart={restart}
           onUndo={undo}
-          canUndo={canUndo && !isPaused}
+          canUndo={canUndo && !isPaused && !gameOver}
           isMuted={isMuted}
           onToggleMute={toggleMute}
           isDark={isDark}
